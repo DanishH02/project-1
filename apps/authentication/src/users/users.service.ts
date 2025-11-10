@@ -1,7 +1,9 @@
-import { Injectable, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, ConflictException, Logger, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { UsersRepository } from './users.repository';
 import { RegisterUserDto } from '../../../../common/dto/register-user.dto';
 import { UserResponseDto } from '../../../../common/dto/user-response.dto';
+import { LoginUserDto } from '../../../../common/dto/login-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -27,9 +29,12 @@ export class UsersService {
       throw new ConflictException('Username already taken');
     }
 
-    // In a real application, you should hash the password here
-    // For simplicity, we're storing it as-is (NOT RECOMMENDED IN PRODUCTION)
-    const user = await this.usersRepository.create(dto);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const user = await this.usersRepository.create({
+      ...dto,
+      password: hashedPassword,
+    });
 
     return this.mapToResponseDto(user);
   }
@@ -38,6 +43,26 @@ export class UsersService {
     this.logger.log('Fetching all users');
     const users = await this.usersRepository.findAll();
     return users.map((user) => this.mapToResponseDto(user));
+  }
+
+  async login(dto: LoginUserDto): Promise<any> {
+    this.logger.log(`Login attempt for: ${dto.email}`);
+    
+    const user = await this.usersRepository.findByEmail(dto.email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    return {
+      id: user._id.toString(),
+      email: user.email,
+      username: user.username,
+    };
   }
 
   private mapToResponseDto(user: any): UserResponseDto {
