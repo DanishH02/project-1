@@ -4,6 +4,7 @@ import { UsersRepository } from './users.repository';
 import { RegisterUserDto } from '../../../../common/dto/register-user.dto';
 import { UserResponseDto } from '../../../../common/dto/user-response.dto';
 import { LoginUserDto } from '../../../../common/dto/login-user.dto';
+import { UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService {
@@ -59,15 +60,15 @@ export class UsersService {
     }
 
     return {
-      id: user._id.toString(),
+      id: (user._id as any).toString(),
       email: user.email,
       username: user.username,
     };
   }
 
-  private mapToResponseDto(user: any): UserResponseDto {
+  private mapToResponseDto(user: UserDocument): UserResponseDto {
     return {
-      id: user._id.toString(),
+      id: (user._id as any).toString(),
       email: user.email,
       username: user.username,
       createdAt: user.createdAt,
